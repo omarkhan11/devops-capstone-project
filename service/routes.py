@@ -8,6 +8,7 @@ from flask import jsonify, request, make_response, abort, url_for   # noqa; F401
 from service.models import Account
 from service.common import status  # HTTP Status Codes
 from . import app  # Import Flask application
+import json
 
 
 ############################################################
@@ -15,7 +16,9 @@ from . import app  # Import Flask application
 ############################################################
 @app.route("/health")
 def health():
-    """Health Status"""
+    """
+    Health Status
+    """
     return jsonify(dict(status="OK")), status.HTTP_200_OK
 
 
@@ -24,7 +27,9 @@ def health():
 ######################################################################
 @app.route("/")
 def index():
-    """Root URL response"""
+    """
+    Root URL response
+    """
     return (
         jsonify(
             name="Account REST API Service",
@@ -57,41 +62,81 @@ def create_accounts():
         jsonify(message), status.HTTP_201_CREATED, {"Location": location_url}
     )
 
+
 ######################################################################
 # LIST ALL ACCOUNTS
 ######################################################################
-
-# ... place you code here to LIST accounts ...
+@app.route("/accounts", methods=["GET"])
+def list_accounts():
+    """
+    List all Accounts
+    This endpoint returns all Accounts as a list
+    """
+    accounts = Account.all()
+    if not accounts:
+        return json.dumps([], default=str), status.HTTP_200_OK
+    return make_response(
+        json.dumps(accounts, default=str), status.HTTP_200_OK
+    )
 
 
 ######################################################################
 # READ AN ACCOUNT
 ######################################################################
-
-# ... place you code here to READ an account ...
+@app.route("/accounts/<int:account_id>", methods=["GET"])
+def get_accounts(account_id):
+    """
+    Reads an Account
+    This endpoint will read an Account based on the account_id that is requested
+    """
+    app.logger.info("Request to read an Account with id: %s", account_id)
+    account = Account.find(account_id)
+    if not account:
+        abort(status.HTTP_404_NOT_FOUND, f"Account with id [{account_id}] could not be found.")
+    return account.serialize(), status.HTTP_200_OK
 
 
 ######################################################################
 # UPDATE AN EXISTING ACCOUNT
 ######################################################################
-
-# ... place you code here to UPDATE an account ...
+@app.route("/accounts/<int:account_id>", methods=["PUT"])
+def update_accounts(account_id):
+    """
+    Updates an Account information
+    This endpoint will update an already existing Account information based on the account_id that is requested
+    """
+    app.logger.info("Request to read an Account with id: %s", account_id)
+    account = Account.find(account_id)
+    if not account:
+        abort(status.HTTP_404_NOT_FOUND, f"Account with id [{account_id}] could not be found.")
+    account.deserialize(request.get_json())
+    account.update()
+    return account.serialize(), status.HTTP_200_OK
 
 
 ######################################################################
 # DELETE AN ACCOUNT
 ######################################################################
-
-# ... place you code here to DELETE an account ...
+@app.route("/accounts/<int:account_id>", methods=["DELETE"])
+def delete_account(account_id):
+    """
+    Deletes a single Account
+    This endpoint will delete an existing account based on the account_id that is requested
+    """
+    app.logger.info("Request to read an Account with id: %s", account_id)
+    account = Account.find(account_id)
+    if account:
+        account.delete()
+    return "", status.HTTP_204_NO_CONTENT
 
 
 ######################################################################
 #  U T I L I T Y   F U N C T I O N S
 ######################################################################
-
-
 def check_content_type(media_type):
-    """Checks that the media type is correct"""
+    """
+    Checks that the media type is correct
+    """
     content_type = request.headers.get("Content-Type")
     if content_type and content_type == media_type:
         return
